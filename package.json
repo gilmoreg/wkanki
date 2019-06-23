@@ -1,0 +1,49 @@
+{
+  "name": "wkanki",
+  "version": "1.0.0",
+  "description": "Create Anki flashcards from Wanikani lessons via AnkiConnect",
+  "scripts": {
+    "build": "webpack --progress",
+    "build:prod": "webpack --progress --config webpack.prod.config.ts --define process.env.NODE_ENV=\"production\""
+  },
+  "keywords": [
+    "userscript"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/fetch-mock": "^7.3.1",
+    "@types/jest": "^24.0.15",
+    "@types/node": "^7.0.29",
+    "@types/node-fetch": "^2.3.7",
+    "@types/pad": "^1.0.0",
+    "@types/tapable": "^1.0.4",
+    "@types/webpack": "^2.2.16",
+    "fetch-mock": "^7.3.3",
+    "jest": "^24.8.0",
+    "jsonschema": "^1.1.1",
+    "node-fetch": "^2.6.0",
+    "pad": "^1.1.0",
+    "ts-loader": "^2.1.0",
+    "ts-node": "^3.0.6",
+    "typescript": "^3.5.2",
+    "webpack": "^2.6.1"
+  },
+  "jest": {
+    "roots": [
+      "<rootDir>"
+    ],
+    "transform": {
+      "^.+\\.ts?$": "ts-jest"
+    },
+    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.ts?$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ]
+  }
+}
