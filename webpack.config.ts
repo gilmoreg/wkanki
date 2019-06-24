@@ -43,14 +43,15 @@ function generateHeader(metadata: IMetadata) {
 export default <webpack.Configuration>{
     entry: './src/index.ts',
     output: {
-        filename: `./dist/${npmPackage.name}.user.js`
+        filename: `./${npmPackage.name}.user.js`
     },
     resolve: {
         extensions: ['.ts', '.tsx', '.js']
     },
     module: {
         rules: [
-            { test: /\.tsx?$/, use: 'ts-loader' }
+            { test: /\.tsx?$/, use: 'ts-loader' },
+            { test: /\.css$/, use: ['style-loader', 'css-loader'] }
         ]
     },
     plugins: [

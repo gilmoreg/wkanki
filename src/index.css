@@ -1,0 +1,70 @@
+.wkanki_show_modal {
+  margin: 2em;
+  text-align: center;
+}
+
+.wkanki_show_modal button {
+  border-radius: 0.5em;
+  padding: 0.25em;
+}
+
+/* The Modal (background) */
+.wkanki_modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1000; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content/Box */
+.wkanki_modal-content {
+  background-color: #fefefe;
+  margin: 15% auto; /* 15% from the top and centered */
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%; /* Could be more or less, depending on screen size */
+  border-radius: 0.5em;
+  display: flex;
+  justify-content: space-evenly;
+
+}
+
+.wkanki_modal-content form {
+  flex: 50%;
+  padding: 1em;
+}
+
+.wkanki_modal-content-preview {
+  flex: 50%;
+  padding: 1em;
+}
+
+.wkanki_modal-content-preview div {
+  border: 1px solid black;
+  border-radius: 0.5em;
+}
+
+#wkanki_preview-front {
+  text-align: center;
+}
+
+/* The Close Button */
+.wkanki_close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.wkanki_close:hover,
+.wkanki_close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
