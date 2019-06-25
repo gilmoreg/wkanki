@@ -43,7 +43,7 @@ const createAKConnectAddNoteContract = (note: Note): AnkiConnectAddNoteContract 
                 Back: note.back,
             },
             options: {
-                allowDuplicate: false,
+                allowDuplicate: true,
             },
             tags: note.tags,
         }

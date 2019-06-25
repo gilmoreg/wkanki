@@ -1,10 +1,11 @@
 import { IDom } from "./Dom";
 import { IAnkiConnectAdapter } from "./AnkiConnectAdapter";
+import { Note } from "./types";
 
 export interface IModal {
   show(): void
   hide(): void
-  update(): Promise<void>
+  update(e: Event): void
 }
 
 const modalTemplate = `
@@ -26,6 +27,9 @@ const modalTemplate = `
         <p>
           <label for="wkanki_back">Back: </label>
           <textarea rows="4" cols="43" id="wkanki_back"></textarea>
+        </p>
+        <p class="wkanki_modal-footer">
+          <button id="wkanki_submit">Add</button>
         </p>
       </form>
       <div class="wkanki_modal-content-preview">
@@ -50,9 +54,9 @@ const generateHTML = (text: string, fontSize: number, color: string) => `<span s
 
 const generateBackHTML = (text: string) => {
   const html = text
-    .replace('class="highlight-kanji"', `style="background-color: rgb(${kanjiColor});"`)
-    .replace('class="highlight-vocabulary"', `style="background-color: rgb(${vocabColor});"`)
-    .replace('class="highlight-radical"', `style="background-color: rgb(${radicalColor});"`);
+    .replace(/class="highlight-kanji"/g, `style="background-color: rgb(${kanjiColor});"`)
+    .replace(/class="highlight-vocabulary"/g, `style="background-color: rgb(${vocabColor});"`)
+    .replace(/class="highlight-radical"/g, `style="background-color: rgb(${radicalColor});"`);
   return html;
 }
 
@@ -74,6 +78,8 @@ export default class Modal implements IModal {
     this.show = this.show.bind(this);
     this.hide = this.hide.bind(this);
     this.insert = this.insert.bind(this);
+    this.updateDecks = this.updateDecks.bind(this);
+    this.addCard = this.addCard.bind(this);
     this.insert();
     this.modal = document.querySelector('#wkanki_modal') as HTMLElement;
     this.select = document.querySelector('#wkanki_decks') as HTMLSelectElement;
@@ -81,13 +87,15 @@ export default class Modal implements IModal {
     this.back = document.querySelector('#wkanki_back') as HTMLTextAreaElement;
     this.frontPreview = document.querySelector('#wkanki_preview-front') as HTMLElement;
     this.backPreview = document.querySelector('#wkanki_preview-back') as HTMLElement;
+    this.updateDecks();
   }
 
   show(): void {
     const lessonType = this.dom.getLessonType();
     // Radicals not supported
     if (lessonType === 'radical') return;
-    this.update().then(() => this.modal.style.display = 'block');
+    this.update();
+    this.modal.style.display = 'block';
   }
 
   hide(): void {
@@ -102,29 +110,46 @@ export default class Modal implements IModal {
     body.insertAdjacentHTML('afterend', modalTemplate);
     const close = document.querySelector('.wkanki_close') as HTMLElement;
     close && close.addEventListener('click', this.hide);
+    const submit = document.querySelector('#wkanki_submit') as HTMLButtonElement;
+    submit && submit.addEventListener('click', this.addCard);
   }
 
-  async update(): Promise<void> {
+  private async updateDecks(): Promise<void> {
     const deckNames = await this.ankiConnectAdapter.getDeckNames()
     if (!deckNames) { return; }
-    const defaultOption = 'Wanikani Lvl 31'; // TODO localstorage setting
     const html = deckNames
-      .map(d => `<option value=${d}${defaultOption === d ? ' selected' : ''}>${d}</option>`)
+      .map(d => `<option value="${d}">${d}</option>`)
       .join();
     this.select.innerHTML = html;
-    this.front.value = this.dom.getCharacter();
+  }
 
+  update(): void {
     const color = this.dom.getLessonType() === 'vocabulary' ? vocabColor : kanjiColor;
-
     const meanings = this.dom.getMeanings();
     const backHTML = this.dom.getReading() + '<br /><br />' +
       this.dom.getMeaning() +
       (meanings !== '' ? `, ${meanings}` : '') + '<br /><br />' +
       this.dom.getMeaningExplanation() + ' ' +
       this.dom.getReadingExplanation();
+    this.front.value = this.dom.getCharacter();
     this.back.value = generateBackHTML(backHTML);
-
     this.frontPreview.innerHTML = generateHTML(this.front.value, frontFontSize, color);
-    this.backPreview.innerHTML = backHTML;
+    this.backPreview.innerHTML = this.back.value;
+  }
+
+  async addCard(e: Event): Promise<boolean> {
+    e.preventDefault();
+    const success = await this.ankiConnectAdapter.addNote({
+      deckName: this.select.value,
+      front: this.frontPreview.innerHTML,
+      back: this.backPreview.innerHTML,
+      tags: []
+    });
+    if (success) {
+      this.hide();
+    } else {
+      console.error(success);
+    }
+    return success;
   }
 }

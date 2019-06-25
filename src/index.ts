@@ -14,5 +14,3 @@ if (supplementalInfo) {
     const button = document.querySelector('#wkanki_show_modal') as HTMLElement;
     button.addEventListener('click', () => modal.show());
 }
-
-modal.update().then(() => modal.show());

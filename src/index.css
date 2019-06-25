@@ -68,3 +68,8 @@
   text-decoration: none;
   cursor: pointer;
 }
+
+.wkanki_modal-footer {
+  text-align: center;
+  margin: 1em;
+}

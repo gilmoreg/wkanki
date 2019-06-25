@@ -144,7 +144,7 @@ const createAKConnectAddNoteContract = (note) => ({
                 Back: note.back,
             },
             options: {
-                allowDuplicate: false,
+                allowDuplicate: true,
             },
             tags: note.tags,
         }
@@ -265,6 +265,9 @@ const modalTemplate = `
           <label for="wkanki_back">Back: </label>
           <textarea rows="4" cols="43" id="wkanki_back"></textarea>
         </p>
+        <p class="wkanki_modal-footer">
+          <button id="wkanki_submit">Add</button>
+        </p>
       </form>
       <div class="wkanki_modal-content-preview">
         <p>Front:</p>
@@ -284,9 +287,9 @@ const generateStyles = (fontSize, color) => `color: rgb(255, 255, 255); font-fam
 const generateHTML = (text, fontSize, color) => `<span style="${generateStyles(fontSize, color)}">${text}</span>`;
 const generateBackHTML = (text) => {
     const html = text
-        .replace('class="highlight-kanji"', `style="background-color: rgb(${kanjiColor});"`)
-        .replace('class="highlight-vocabulary"', `style="background-color: rgb(${vocabColor});"`)
-        .replace('class="highlight-radical"', `style="background-color: rgb(${radicalColor});"`);
+        .replace(/class="highlight-kanji"/g, `style="background-color: rgb(${kanjiColor});"`)
+        .replace(/class="highlight-vocabulary"/g, `style="background-color: rgb(${vocabColor});"`)
+        .replace(/class="highlight-radical"/g, `style="background-color: rgb(${radicalColor});"`);
     return html;
 };
 class Modal {
@@ -296,6 +299,8 @@ class Modal {
         this.show = this.show.bind(this);
         this.hide = this.hide.bind(this);
         this.insert = this.insert.bind(this);
+        this.updateDecks = this.updateDecks.bind(this);
+        this.addCard = this.addCard.bind(this);
         this.insert();
         this.modal = document.querySelector('#wkanki_modal');
         this.select = document.querySelector('#wkanki_decks');
@@ -303,12 +308,15 @@ class Modal {
         this.back = document.querySelector('#wkanki_back');
         this.frontPreview = document.querySelector('#wkanki_preview-front');
         this.backPreview = document.querySelector('#wkanki_preview-back');
+        this.updateDecks();
     }
     show() {
         const lessonType = this.dom.getLessonType();
+        // Radicals not supported
         if (lessonType === 'radical')
             return;
-        this.update().then(() => this.modal.style.display = 'block');
+        this.update();
+        this.modal.style.display = 'block';
     }
     hide() {
         this.modal.style.display = 'none';
@@ -321,48 +329,47 @@ class Modal {
         body.insertAdjacentHTML('afterend', modalTemplate);
         const close = document.querySelector('.wkanki_close');
         close && close.addEventListener('click', this.hide);
+        const submit = document.querySelector('#wkanki_submit');
+        submit && submit.addEventListener('click', this.addCard);
     }
-    async update() {
+    async updateDecks() {
         const deckNames = await this.ankiConnectAdapter.getDeckNames();
         if (!deckNames) {
             return;
         }
-        const defaultOption = 'Wanikani Lvl 31'; // TODO localstorage setting
         const html = deckNames
-            .map(d => `<option value=${d}${defaultOption === d ? ' selected' : ''}>${d}</option>`)
+            .map(d => `<option value="${d}">${d}</option>`)
             .join();
         this.select.innerHTML = html;
+    }
+    update() {
+        const color = this.dom.getLessonType() === 'vocabulary' ? vocabColor : kanjiColor;
+        const meanings = this.dom.getMeanings();
+        const backHTML = this.dom.getReading() + '<br /><br />' +
+            this.dom.getMeaning() +
+            (meanings !== '' ? `, ${meanings}` : '') + '<br /><br />' +
+            this.dom.getMeaningExplanation() + ' ' +
+            this.dom.getReadingExplanation();
         this.front.value = this.dom.getCharacter();
-        const lessonType = this.dom.getLessonType();
-        let color = '';
-        switch (lessonType) {
-            case 'vocabulary':
-                color = vocabColor;
-                break;
-            case 'kanji':
-                color = kanjiColor;
-                break;
-            case 'radical':
-                color = radicalColor;
-                break;
-            default: throw new Error(`unknown lesson type ${lessonType}`);
-        }
-        let backHTML = '';
-        if (lessonType === 'radical') {
-            backHTML += this.dom.getMeaning() + '<br /><br />' +
-                this.dom.getRadicalMnemonic();
-        }
-        else {
-            const meanings = this.dom.getMeanings();
-            backHTML += this.dom.getReading() + '<br /><br />' +
-                this.dom.getMeaning() +
-                (meanings !== '' ? `, ${meanings}` : '') + '<br /><br />' +
-                this.dom.getMeaningExplanation() + ' ' +
-                this.dom.getReadingExplanation();
-        }
         this.back.value = generateBackHTML(backHTML);
         this.frontPreview.innerHTML = generateHTML(this.front.value, frontFontSize, color);
-        this.backPreview.innerHTML = backHTML;
+        this.backPreview.innerHTML = this.back.value;
+    }
+    async addCard(e) {
+        e.preventDefault();
+        const success = await this.ankiConnectAdapter.addNote({
+            deckName: this.select.value,
+            front: this.frontPreview.innerHTML,
+            back: this.backPreview.innerHTML,
+            tags: []
+        });
+        if (success) {
+            this.hide();
+        }
+        else {
+            console.error(success);
+        }
+        return success;
     }
 }
 exports.default = Modal;
@@ -374,7 +381,7 @@ exports.default = Modal;
 
 exports = module.exports = __webpack_require__(5)(false);
 // Module
-exports.push([module.i, ".wkanki_show_modal {\n  margin: 2em;\n  text-align: center;\n}\n\n.wkanki_show_modal button {\n  border-radius: 0.5em;\n  padding: 0.25em;\n}\n\n/* The Modal (background) */\n.wkanki_modal {\n  display: none; /* Hidden by default */\n  position: fixed; /* Stay in place */\n  z-index: 1000; /* Sit on top */\n  left: 0;\n  top: 0;\n  width: 100%; /* Full width */\n  height: 100%; /* Full height */\n  overflow: auto; /* Enable scroll if needed */\n  background-color: rgb(0,0,0); /* Fallback color */\n  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */\n}\n\n/* Modal Content/Box */\n.wkanki_modal-content {\n  background-color: #fefefe;\n  margin: 15% auto; /* 15% from the top and centered */\n  padding: 20px;\n  border: 1px solid #888;\n  width: 80%; /* Could be more or less, depending on screen size */\n  border-radius: 0.5em;\n  display: flex;\n  justify-content: space-evenly;\n\n}\n\n.wkanki_modal-content form {\n  flex: 50%;\n  padding: 1em;\n}\n\n.wkanki_modal-content-preview {\n  flex: 50%;\n  padding: 1em;\n}\n\n.wkanki_modal-content-preview div {\n  border: 1px solid black;\n  border-radius: 0.5em;\n}\n\n#wkanki_preview-front {\n  text-align: center;\n}\n\n/* The Close Button */\n.wkanki_close {\n  color: #aaa;\n  float: right;\n  font-size: 28px;\n  font-weight: bold;\n}\n\n.wkanki_close:hover,\n.wkanki_close:focus {\n  color: black;\n  text-decoration: none;\n  cursor: pointer;\n}", ""]);
+exports.push([module.i, ".wkanki_show_modal {\n  margin: 2em;\n  text-align: center;\n}\n\n.wkanki_show_modal button {\n  border-radius: 0.5em;\n  padding: 0.25em;\n}\n\n/* The Modal (background) */\n.wkanki_modal {\n  display: none; /* Hidden by default */\n  position: fixed; /* Stay in place */\n  z-index: 1000; /* Sit on top */\n  left: 0;\n  top: 0;\n  width: 100%; /* Full width */\n  height: 100%; /* Full height */\n  overflow: auto; /* Enable scroll if needed */\n  background-color: rgb(0,0,0); /* Fallback color */\n  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */\n}\n\n/* Modal Content/Box */\n.wkanki_modal-content {\n  background-color: #fefefe;\n  margin: 15% auto; /* 15% from the top and centered */\n  padding: 20px;\n  border: 1px solid #888;\n  width: 80%; /* Could be more or less, depending on screen size */\n  border-radius: 0.5em;\n  display: flex;\n  justify-content: space-evenly;\n\n}\n\n.wkanki_modal-content form {\n  flex: 50%;\n  padding: 1em;\n}\n\n.wkanki_modal-content-preview {\n  flex: 50%;\n  padding: 1em;\n}\n\n.wkanki_modal-content-preview div {\n  border: 1px solid black;\n  border-radius: 0.5em;\n}\n\n#wkanki_preview-front {\n  text-align: center;\n}\n\n/* The Close Button */\n.wkanki_close {\n  color: #aaa;\n  float: right;\n  font-size: 28px;\n  font-weight: bold;\n}\n\n.wkanki_close:hover,\n.wkanki_close:focus {\n  color: black;\n  text-decoration: none;\n  cursor: pointer;\n}\n\n.wkanki_modal-footer {\n  text-align: center;\n  margin: 1em;\n}", ""]);
 
 
 /***/ }),
@@ -995,7 +1002,6 @@ if (supplementalInfo) {
     const button = document.querySelector('#wkanki_show_modal');
     button.addEventListener('click', () => modal.show());
 }
-modal.update().then(() => modal.show());
 
 
 /***/ })
