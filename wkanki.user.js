@@ -290,7 +290,7 @@ const generateBackHTML = (text) => {
         .replace(/class="highlight-kanji"/g, `style="background-color: rgb(${kanjiColor});"`)
         .replace(/class="highlight-vocabulary"/g, `style="background-color: rgb(${vocabColor});"`)
         .replace(/class="highlight-radical"/g, `style="background-color: rgb(${radicalColor});"`);
-    return html;
+    return `<div style="font-size: ${backFontSize};">${html}</div>`;
 };
 class Modal {
     constructor(ankiConnectAdapter, dom) {
@@ -299,7 +299,9 @@ class Modal {
         this.show = this.show.bind(this);
         this.hide = this.hide.bind(this);
         this.insert = this.insert.bind(this);
+        this.update = this.update.bind(this);
         this.updateDecks = this.updateDecks.bind(this);
+        this.updatePreview = this.updatePreview.bind(this);
         this.addCard = this.addCard.bind(this);
         this.insert();
         this.modal = document.querySelector('#wkanki_modal');
@@ -308,6 +310,8 @@ class Modal {
         this.back = document.querySelector('#wkanki_back');
         this.frontPreview = document.querySelector('#wkanki_preview-front');
         this.backPreview = document.querySelector('#wkanki_preview-back');
+        this.front.addEventListener('input', this.updatePreview);
+        this.back.addEventListener('input', this.updatePreview);
         this.updateDecks();
     }
     show() {
@@ -315,7 +319,7 @@ class Modal {
         // Radicals not supported
         if (lessonType === 'radical')
             return;
-        this.update();
+        this.update(null);
         this.modal.style.display = 'block';
     }
     hide() {
@@ -342,16 +346,27 @@ class Modal {
             .join();
         this.select.innerHTML = html;
     }
-    update() {
-        const color = this.dom.getLessonType() === 'vocabulary' ? vocabColor : kanjiColor;
+    update(e) {
+        console.log('update', e && e.target);
+        e && e.stopPropagation();
         const meanings = this.dom.getMeanings();
-        const backHTML = this.dom.getReading() + '<br /><br />' +
-            this.dom.getMeaning() +
-            (meanings !== '' ? `, ${meanings}` : '') + '<br /><br />' +
-            this.dom.getMeaningExplanation() + ' ' +
-            this.dom.getReadingExplanation();
+        const backHTML = `
+      <span>${this.dom.getReading()}</span>
+      <p>
+        ${this.dom.getMeaning()}${(meanings !== '' ? `, ${meanings}` : '')}
+      </p>
+      <p>
+        ${this.dom.getMeaningExplanation()}&nbsp;
+        ${this.dom.getReadingExplanation()}
+      </p>
+    `;
         this.front.value = this.dom.getCharacter();
         this.back.value = generateBackHTML(backHTML);
+        this.updatePreview(e);
+    }
+    updatePreview(e) {
+        e && e.stopPropagation();
+        const color = this.dom.getLessonType() === 'vocabulary' ? vocabColor : kanjiColor;
         this.frontPreview.innerHTML = generateHTML(this.front.value, frontFontSize, color);
         this.backPreview.innerHTML = this.back.value;
     }
