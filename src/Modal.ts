@@ -129,7 +129,6 @@ export default class Modal implements IModal {
   }
 
   update(e: Event | null): void {
-    console.log('update', e && e.target);
     e && e.stopPropagation();
     const meanings = this.dom.getMeanings();
     const backHTML = `

@@ -347,7 +347,6 @@ class Modal {
         this.select.innerHTML = html;
     }
     update(e) {
-        console.log('update', e && e.target);
         e && e.stopPropagation();
         const meanings = this.dom.getMeanings();
         const backHTML = `
