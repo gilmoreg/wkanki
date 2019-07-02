@@ -263,7 +263,7 @@ const modalTemplate = `
         </p>
         <p>
           <label for="wkanki_back">Back: </label>
-          <textarea rows="4" cols="43" id="wkanki_back"></textarea>
+          <textarea rows="13" cols="43" id="wkanki_back"></textarea>
         </p>
         <p class="wkanki_modal-footer">
           <button id="wkanki_submit">Add</button>
