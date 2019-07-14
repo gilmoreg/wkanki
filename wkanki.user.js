@@ -4,6 +4,8 @@
 // @description Create Anki flashcards from Wanikani lessons via AnkiConnect
 // @version     0.1.0
 // @include     https://www.wanikani.com/lesson/session
+// @include     https://www.wanikani.com/vocabulary/*
+// @include     https://www.wanikani.com/kanji/*
 // ==/UserScript==
 
 /******/ (function(modules) { // webpackBootstrap
@@ -185,57 +187,206 @@ exports.default = AnkiConnectAdapter;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-class Dom {
-    getCharacter() {
+class WaniKaniPage {
+    challenge() {
+        throw new Error("Method not implemented.");
+    }
+    answer() {
+        throw new Error("Method not implemented.");
+    }
+    type() {
+        return getType(getPageType());
+    }
+}
+class KanjiLesson extends WaniKaniPage {
+    getMeanings() {
+        const synonyms = document.querySelector('##supplement-kan-meaning>div>div>div');
+        if (!synonyms || !synonyms.innerHTML || synonyms.innerHTML === '(None)')
+            return '';
+        return synonyms.innerHTML;
+    }
+    challenge() {
         const character = document.querySelector('#character');
         return character && character.innerHTML || '';
     }
-    getMeaning() {
+    answer() {
+        const reading = document.querySelector('#supplement-kan-reading span:lang(ja)');
         const meaning = document.querySelector('#meaning');
-        return meaning && meaning.innerText || '';
+        const meanings = this.getMeanings();
+        const meaningMnemonic = document.querySelector('#supplement-kan-meaning-mne');
+        const meaningHint = document.querySelector('#supplement-kan-meaning-hnt');
+        const readingMnemonic = document.querySelector('#supplement-kan-reading-mne');
+        const readingHint = document.querySelector('#supplement-kan-reading-hnt');
+        return `
+      <span>${reading && reading.innerText}</span>
+      <p>
+        ${meaning && meaning.innerText}${(meanings !== '' ? `, ${meanings}` : '')}
+      </p>
+      <p>
+        ${meaningMnemonic && meaningMnemonic.innerHTML}
+        ${meaningHint && meaningHint.innerHTML}
+        ${readingMnemonic && readingMnemonic.innerHTML}
+        ${readingHint && readingHint.innerHTML}
+      </p>
+    `;
     }
+}
+exports.KanjiLesson = KanjiLesson;
+class VocabLesson extends WaniKaniPage {
     getMeanings() {
         const synonyms = document.querySelector('#supplement-voc-synonyms');
         if (!synonyms || !synonyms.innerHTML || synonyms.innerHTML === '(None)')
             return '';
         return synonyms.innerHTML;
     }
-    getMeaningExplanation() {
-        const meaningExplanation = document.querySelector('#supplement-voc-meaning-exp');
-        return meaningExplanation && meaningExplanation.innerHTML || '';
+    challenge() {
+        const character = document.querySelector('#character');
+        return character && character.innerHTML || '';
     }
-    getReading() {
+    answer() {
         const reading = document.querySelector('#supplement-voc-reading div:lang(ja)');
-        return reading && reading.innerText || '';
-    }
-    getReadingExplanation() {
+        const meaning = document.querySelector('#meaning');
+        const meanings = this.getMeanings();
+        const meaningExplanation = document.querySelector('#supplement-voc-meaning-exp');
         const readingExplanation = document.querySelector('#supplement-voc-reading-exp');
-        return readingExplanation && readingExplanation.innerHTML || '';
-    }
-    getMeaningHint() {
-        const meaningHint = document.querySelector('#supplement-kan-meaning-hnt');
-        return meaningHint && meaningHint.innerText || '';
-    }
-    getReadingHint() {
-        const readingHint = document.querySelector('#supplement-kan-reading-hnt');
-        return readingHint && readingHint.innerText || '';
-    }
-    getPartOfSpeech() {
         const pos = document.querySelector('#supplement-voc-part-of-speech');
-        return pos && pos.innerHTML || '';
-    }
-    getRadicalMnemonic() {
-        const mnemonic = document.querySelector('#supplement-rad-name-mne');
-        return mnemonic && mnemonic.innerHTML || '';
-    }
-    getLessonType() {
-        const mainInfo = document.querySelector('#main-info');
-        if (!mainInfo)
-            return '';
-        return mainInfo.classList[0];
+        return `
+      <span>${reading && reading.innerText}</span>
+      <p>
+        ${meaning && meaning.innerText}${(meanings !== '' ? `, ${meanings}` : '')}
+      </p>
+      <p>
+        ${meaningExplanation && meaningExplanation.innerHTML}
+        ${readingExplanation && readingExplanation.innerHTML}
+      </p>
+      <p>
+        Part of speech: ${pos && pos.innerHTML}
+      </p>
+  `;
     }
 }
-exports.default = Dom;
+exports.VocabLesson = VocabLesson;
+class KanjiPage extends WaniKaniPage {
+    error(message) {
+        const errorMessage = `cannot parse kanji page: ${message}`;
+        throw new Error(errorMessage);
+    }
+    challenge() {
+        const character = document.querySelector('.kanji-icon');
+        return character && character.innerText || '';
+    }
+    answer() {
+        const meaning = createMeaning();
+        const readingElements = Array.from(document.querySelectorAll('p:lang(ja)'));
+        if (!readingElements)
+            this.error('no reading elements');
+        const readings = createReadings(readingElements);
+        const mnemonicElements = Array.from(document.querySelectorAll('.mnemonic-content p'));
+        if (!mnemonicElements || mnemonicElements.length < 1)
+            this.error('no mnemonic elements');
+        const mnemonics = mnemonicElements.map(el => el.innerHTML).join(' ');
+        return `
+      <p>${meaning}</p>
+      <p>
+        ${readings}
+      </p>
+      <p>
+        ${mnemonics}
+      </p>
+    `;
+    }
+}
+exports.KanjiPage = KanjiPage;
+class VocabPage extends WaniKaniPage {
+    error(message) {
+        const errorMessage = `cannot parse vocab page: ${message}`;
+        throw new Error(errorMessage);
+    }
+    challenge() {
+        const character = document.querySelector('.vocabulary-icon');
+        return character && character.innerText || '';
+    }
+    answer() {
+        const meaning = createMeaning();
+        const readingElements = Array.from(document.querySelectorAll('.vocabulary-reading p:lang(ja)'));
+        if (!readingElements)
+            this.error('no reading elements');
+        const readings = createReadings(readingElements);
+        const mnemonicElements = Array.from(document.querySelectorAll('.mnemonic-content p'));
+        if (!mnemonicElements || mnemonicElements.length < 1)
+            this.error('no mnemonic elements');
+        const mnemonics = mnemonicElements.map(el => el.innerHTML).join(' ');
+        return `
+      <p>${meaning}</p>
+      <p>
+        ${readings}
+      </p>
+      <p>
+        ${mnemonics}
+      </p>
+    `;
+    }
+}
+exports.VocabPage = VocabPage;
+const createMeaning = () => {
+    const header = document.querySelector('.span12 header h1');
+    const meaningMatches = header.innerHTML.match(/^.+<\/span>\s(.+)$/m);
+    return meaningMatches[1];
+};
+const createReadings = (readingElements) => readingElements
+    .filter(el => !el.innerText.includes('None'))
+    .map(el => {
+    const wkCanon = !el.parentElement.classList.contains('muted-content');
+    return wkCanon ? el.innerText : `<span style="opacity: 0.3">${el.innerText}</span>`;
+})
+    .join(', ');
+const waitForClass = (node) => new Promise((resolve) => {
+    setInterval(() => {
+        console.log(node.classList);
+        if (node.classList.length > 0) {
+            resolve();
+        }
+    }, 1);
+});
+const getPageType = () => window.location.href.match(/.+lesson\/session/) ? 'lesson' : 'page';
+const getType = async (pageType) => {
+    // Lesson
+    if (pageType === 'lesson') {
+        const mainInfo = document.querySelector('#main-info');
+        if (!mainInfo)
+            throw new Error('unable to get page type');
+        await waitForClass(mainInfo);
+        if (mainInfo.classList.contains('vocabulary'))
+            return 'vocabulary';
+        if (mainInfo.classList.contains('kanji'))
+            return 'kanji';
+        throw new Error('unsupported lesson type');
+    }
+    // Item
+    const pageRegex = /https:\/\/www.wanikani.com\/(.+)\/.+/;
+    const matches = pageRegex.exec(window.location.href);
+    if (!matches || matches.length < 2) {
+        throw new Error('url not recognized');
+    }
+    return matches[1];
+};
+async function NewWaniKaniPage() {
+    const pageType = getPageType();
+    const type = await getType(pageType);
+    if (pageType === 'lesson') {
+        switch (type) {
+            case 'kanji': return new KanjiLesson();
+            case 'vocabulary': return new VocabLesson();
+            default: throw new Error('unsupported lesson type');
+        }
+    }
+    switch (type) {
+        case 'kanji': return new KanjiPage();
+        case 'vocabulary': return new VocabPage();
+        default: throw new Error('unsupported page type');
+    }
+}
+exports.NewWaniKaniPage = NewWaniKaniPage;
 
 
 /***/ }),
@@ -280,22 +431,27 @@ const modalTemplate = `
 `;
 const radicalColor = '214, 241, 255';
 const kanjiColor = '255, 214, 241';
+const kanjiBackgroundColor = '241, 0, 161';
 const vocabColor = '161, 0, 241';
+const vocabBackgroundColor = '241,214,240';
 const frontFontSize = 64;
 const backFontSize = 16;
-const generateStyles = (fontSize, color) => `color: rgb(255, 255, 255); font-family: &quot;Hiragino Kaku Gothic Pro&quot;, Meiryo, &quot;Source Han Sans Japanese&quot;, NotoSansCJK, TakaoPGothic, &quot;Yu Gothic&quot;, &quot;ヒラギノ角ゴ Pro W3&quot;, メイリオ, Osaka, &quot;MS PGothic&quot;, &quot;ＭＳ Ｐゴシック&quot;, sans-serif; font-size: ${fontSize}px; text-align: center; background-color: rgb(${color});`;
+const generateStyles = (fontSize, color) => `color: rgb(255, 255, 255); font-family: &quot;Hiragino Kaku Gothic Pro&quot;, Meiryo, &quot;Source Han Sans Japanese&quot;, NotoSansCJK, TakaoPGothic, &quot;Yu Gothic&quot;, &quot;ヒラギノ角ゴ Pro W3&quot;, メイリオ, Osaka, &quot;MS PGothic&quot;, &quot;ＭＳ Ｐゴシック&quot;, sans-serif; font-size: ${fontSize}px; text-align: center; background-color: rgb(${color}); line-height: normal;`;
 const generateHTML = (text, fontSize, color) => `<span style="${generateStyles(fontSize, color)}">${text}</span>`;
 const generateBackHTML = (text) => {
     const html = text
         .replace(/class="highlight-kanji"/g, `style="background-color: rgb(${kanjiColor});"`)
-        .replace(/class="highlight-vocabulary"/g, `style="background-color: rgb(${vocabColor});"`)
-        .replace(/class="highlight-radical"/g, `style="background-color: rgb(${radicalColor});"`);
+        .replace(/class="kanji-highlight"/g, `style="background-color: rgb(${kanjiColor});"`)
+        .replace(/class="highlight-vocabulary"/g, `style="background-color: rgb(${vocabBackgroundColor});"`)
+        .replace(/class="vocabulary-highlight"/g, `style="background-color: rgb(${vocabBackgroundColor});"`)
+        .replace(/class="highlight-radical"/g, `style="background-color: rgb(${radicalColor});"`)
+        .replace(/class="radical-highlight"/g, `style="background-color: rgb(${radicalColor});"`);
     return `<div style="font-size: ${backFontSize};">${html}</div>`;
 };
 class Modal {
-    constructor(ankiConnectAdapter, dom) {
+    constructor(ankiConnectAdapter, page) {
         this.ankiConnectAdapter = ankiConnectAdapter;
-        this.dom = dom;
+        this.page = page;
         this.show = this.show.bind(this);
         this.hide = this.hide.bind(this);
         this.insert = this.insert.bind(this);
@@ -314,8 +470,8 @@ class Modal {
         this.back.addEventListener('input', this.updatePreview);
         this.updateDecks();
     }
-    show() {
-        const lessonType = this.dom.getLessonType();
+    async show() {
+        const lessonType = await this.page.type();
         // Radicals not supported
         if (lessonType === 'radical')
             return;
@@ -348,24 +504,14 @@ class Modal {
     }
     update(e) {
         e && e.stopPropagation();
-        const meanings = this.dom.getMeanings();
-        const backHTML = `
-      <span>${this.dom.getReading()}</span>
-      <p>
-        ${this.dom.getMeaning()}${(meanings !== '' ? `, ${meanings}` : '')}
-      </p>
-      <p>
-        ${this.dom.getMeaningExplanation()}&nbsp;
-        ${this.dom.getReadingExplanation()}
-      </p>
-    `;
-        this.front.value = this.dom.getCharacter();
-        this.back.value = generateBackHTML(backHTML);
+        this.front.value = this.page.challenge();
+        this.back.value = generateBackHTML(this.page.answer());
         this.updatePreview(e);
     }
-    updatePreview(e) {
+    async updatePreview(e) {
         e && e.stopPropagation();
-        const color = this.dom.getLessonType() === 'vocabulary' ? vocabColor : kanjiColor;
+        const type = await this.page.type();
+        const color = type === 'vocabulary' ? vocabColor : kanjiBackgroundColor;
         this.frontPreview.innerHTML = generateHTML(this.front.value, frontFontSize, color);
         this.backPreview.innerHTML = this.back.value;
     }
@@ -1006,16 +1152,23 @@ const AnkiConnectAdapter_1 = __webpack_require__(1);
 __webpack_require__(0);
 const Modal_1 = __webpack_require__(3);
 const Dom_1 = __webpack_require__(2);
-const dom = new Dom_1.default();
-const ankiConnectAdapter = new AnkiConnectAdapter_1.default();
-const modal = new Modal_1.default(ankiConnectAdapter, dom);
-const supplementalInfo = document.querySelector('#supplement-info');
-if (supplementalInfo) {
+const run = async () => {
+    const wkPage = await Dom_1.NewWaniKaniPage();
+    const ankiConnectAdapter = new AnkiConnectAdapter_1.default();
+    const modal = new Modal_1.default(ankiConnectAdapter, wkPage);
+    const supplementalInfo = document.querySelector('#supplement-info');
+    const information = document.querySelector('#information');
     const buttonHTML = `<div class="wkanki_show_modal"><button id="wkanki_show_modal">Add to Anki</button></div>`;
-    supplementalInfo.insertAdjacentHTML('beforeend', buttonHTML);
+    if (supplementalInfo) {
+        supplementalInfo.insertAdjacentHTML('beforeend', buttonHTML);
+    }
+    if (information) {
+        information.insertAdjacentHTML('afterend', buttonHTML);
+    }
     const button = document.querySelector('#wkanki_show_modal');
-    button.addEventListener('click', () => modal.show());
-}
+    button && button.addEventListener('click', () => modal.show());
+};
+run();
 
 
 /***/ })

@@ -1,12 +1,12 @@
-import { IDom } from "./Dom";
+import { IWaniKaniPage } from "./Dom";
 import { IAnkiConnectAdapter } from "./AnkiConnectAdapter";
 import { Note } from "./types";
 
 export interface IModal {
-  show(): void
+  show(): Promise<void>
   hide(): void
   update(e: Event): void
-  updatePreview(e: Event | null): void
+  updatePreview(e: Event | null): Promise<void>
 }
 
 const modalTemplate = `
@@ -45,26 +45,31 @@ const modalTemplate = `
 
 const radicalColor = '214, 241, 255';
 const kanjiColor = '255, 214, 241';
+const kanjiBackgroundColor = '241, 0, 161';
 const vocabColor = '161, 0, 241';
+const vocabBackgroundColor = '241,214,240';
 const frontFontSize = 64;
 const backFontSize = 16;
 
-const generateStyles = (fontSize: number, color: string) => `color: rgb(255, 255, 255); font-family: &quot;Hiragino Kaku Gothic Pro&quot;, Meiryo, &quot;Source Han Sans Japanese&quot;, NotoSansCJK, TakaoPGothic, &quot;Yu Gothic&quot;, &quot;ヒラギノ角ゴ Pro W3&quot;, メイリオ, Osaka, &quot;MS PGothic&quot;, &quot;ＭＳ Ｐゴシック&quot;, sans-serif; font-size: ${fontSize}px; text-align: center; background-color: rgb(${color});`;
+const generateStyles = (fontSize: number, color: string) => `color: rgb(255, 255, 255); font-family: &quot;Hiragino Kaku Gothic Pro&quot;, Meiryo, &quot;Source Han Sans Japanese&quot;, NotoSansCJK, TakaoPGothic, &quot;Yu Gothic&quot;, &quot;ヒラギノ角ゴ Pro W3&quot;, メイリオ, Osaka, &quot;MS PGothic&quot;, &quot;ＭＳ Ｐゴシック&quot;, sans-serif; font-size: ${fontSize}px; text-align: center; background-color: rgb(${color}); line-height: normal;`;
 
 const generateHTML = (text: string, fontSize: number, color: string) => `<span style="${generateStyles(fontSize, color)}">${text}</span>`;
 
 const generateBackHTML = (text: string) => {
   const html = text
     .replace(/class="highlight-kanji"/g, `style="background-color: rgb(${kanjiColor});"`)
-    .replace(/class="highlight-vocabulary"/g, `style="background-color: rgb(${vocabColor});"`)
-    .replace(/class="highlight-radical"/g, `style="background-color: rgb(${radicalColor});"`);
+    .replace(/class="kanji-highlight"/g, `style="background-color: rgb(${kanjiColor});"`)
+    .replace(/class="highlight-vocabulary"/g, `style="background-color: rgb(${vocabBackgroundColor});"`)
+    .replace(/class="vocabulary-highlight"/g, `style="background-color: rgb(${vocabBackgroundColor});"`)
+    .replace(/class="highlight-radical"/g, `style="background-color: rgb(${radicalColor});"`)
+    .replace(/class="radical-highlight"/g, `style="background-color: rgb(${radicalColor});"`);
   return `<div style="font-size: ${backFontSize};">${html}</div>`;
 }
 
 export default class Modal implements IModal {
   ankiConnectAdapter: IAnkiConnectAdapter
-  dom: IDom
   modal: HTMLElement;
+  page: IWaniKaniPage;
 
   // Elements
   select: HTMLSelectElement;
@@ -73,9 +78,9 @@ export default class Modal implements IModal {
   frontPreview: HTMLElement;
   backPreview: HTMLElement;
 
-  constructor(ankiConnectAdapter: IAnkiConnectAdapter, dom: IDom) {
+  constructor(ankiConnectAdapter: IAnkiConnectAdapter, page: IWaniKaniPage) {
     this.ankiConnectAdapter = ankiConnectAdapter;
-    this.dom = dom;
+    this.page = page;
     this.show = this.show.bind(this);
     this.hide = this.hide.bind(this);
     this.insert = this.insert.bind(this);
@@ -95,8 +100,8 @@ export default class Modal implements IModal {
     this.updateDecks();
   }
 
-  show(): void {
-    const lessonType = this.dom.getLessonType();
+  async show(): Promise<void> {
+    const lessonType = await this.page.type();
     // Radicals not supported
     if (lessonType === 'radical') return;
     this.update(null);
@@ -130,25 +135,15 @@ export default class Modal implements IModal {
 
   update(e: Event | null): void {
     e && e.stopPropagation();
-    const meanings = this.dom.getMeanings();
-    const backHTML = `
-      <span>${this.dom.getReading()}</span>
-      <p>
-        ${this.dom.getMeaning()}${(meanings !== '' ? `, ${meanings}` : '')}
-      </p>
-      <p>
-        ${this.dom.getMeaningExplanation()}&nbsp;
-        ${this.dom.getReadingExplanation()}
-      </p>
-    `;
-    this.front.value = this.dom.getCharacter();
-    this.back.value = generateBackHTML(backHTML);
+    this.front.value = this.page.challenge();
+    this.back.value = generateBackHTML(this.page.answer());
     this.updatePreview(e);
   }
 
-  updatePreview(e: Event | null): void {
+  async updatePreview(e: Event | null): Promise<void> {
     e && e.stopPropagation();
-    const color = this.dom.getLessonType() === 'vocabulary' ? vocabColor : kanjiColor;
+    const type = await this.page.type();
+    const color = type === 'vocabulary' ? vocabColor : kanjiBackgroundColor;
     this.frontPreview.innerHTML = generateHTML(this.front.value, frontFontSize, color);
     this.backPreview.innerHTML = this.back.value;
   }

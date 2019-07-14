@@ -5,6 +5,8 @@
   "description": "Create Anki flashcards from Wanikani lessons via AnkiConnect",
   "version": "0.1.0",
   "include": [
-    "https://www.wanikani.com/lesson/session"
+    "https://www.wanikani.com/lesson/session",
+    "https://www.wanikani.com/vocabulary/*",
+    "https://www.wanikani.com/kanji/*"
   ]
 }
