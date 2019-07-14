@@ -71,6 +71,7 @@ export default class Modal implements IModal {
   dom: IDom
   modal: HTMLElement;
   page: IWaniKaniPage;
+  storage: Storage;
 
   // Elements
   select: HTMLSelectElement;
@@ -79,9 +80,10 @@ export default class Modal implements IModal {
   frontPreview: HTMLElement;
   backPreview: HTMLElement;
 
-  constructor(ankiConnectAdapter: IAnkiConnectAdapter = new AnkiConnectAdapter(), dom: IDom = new Dom()) {
+  constructor(ankiConnectAdapter: IAnkiConnectAdapter = new AnkiConnectAdapter(), dom: IDom = new Dom(), storage: Storage = localStorage) {
     this.ankiConnectAdapter = ankiConnectAdapter;
     this.dom = dom;
+    this.storage = storage;
     this.show = this.show.bind(this);
     this.hide = this.hide.bind(this);
     this.insert = this.insert.bind(this);
@@ -89,6 +91,8 @@ export default class Modal implements IModal {
     this.updateDecks = this.updateDecks.bind(this);
     this.updatePreview = this.updatePreview.bind(this);
     this.addCard = this.addCard.bind(this);
+    this.getStoredDeck = this.getStoredDeck.bind(this);
+    this.setStoredDeck = this.setStoredDeck.bind(this);
     this.insert();
     this.modal = this.dom.querySelector('#wkanki_modal') as HTMLElement;
     this.select = this.dom.querySelector('#wkanki_decks') as HTMLSelectElement;
@@ -98,6 +102,7 @@ export default class Modal implements IModal {
     this.backPreview = this.dom.querySelector('#wkanki_preview-back') as HTMLElement;
     this.front.addEventListener('input', this.updatePreview);
     this.back.addEventListener('input', this.updatePreview);
+    this.select.addEventListener('change', this.setStoredDeck);
     this.updateDecks();
   }
 
@@ -125,11 +130,21 @@ export default class Modal implements IModal {
     submit && submit.addEventListener('click', this.addCard);
   }
 
+  private getStoredDeck(): string {
+    return (this.storage && this.storage.getItem('wkanki_deck')) || '';
+  }
+
+  private setStoredDeck(e: Event) {
+    const target = e.target as HTMLOptionElement;
+    this.storage && this.storage.setItem('wkanki_deck', target.value);
+  }
+
   private async updateDecks(): Promise<void> {
-    const deckNames = await this.ankiConnectAdapter.getDeckNames()
+    const deckNames = await this.ankiConnectAdapter.getDeckNames();
+    const storedDeck = this.getStoredDeck();
     if (!deckNames) { return; }
     const html = deckNames
-      .map(d => `<option value="${d}">${d}</option>`)
+      .map(d => `<option value="${d}" ${d === storedDeck ? 'selected' : ''}>${d}</option>`)
       .join();
     this.select.innerHTML = html;
   }

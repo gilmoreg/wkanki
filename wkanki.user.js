@@ -306,9 +306,10 @@ const generateBackHTML = (text) => {
     return `<div style="font-size: ${backFontSize};">${html}</div>`;
 };
 class Modal {
-    constructor(ankiConnectAdapter = new AnkiConnectAdapter_1.default(), dom = new Dom_1.Dom()) {
+    constructor(ankiConnectAdapter = new AnkiConnectAdapter_1.default(), dom = new Dom_1.Dom(), storage = localStorage) {
         this.ankiConnectAdapter = ankiConnectAdapter;
         this.dom = dom;
+        this.storage = storage;
         this.show = this.show.bind(this);
         this.hide = this.hide.bind(this);
         this.insert = this.insert.bind(this);
@@ -316,6 +317,8 @@ class Modal {
         this.updateDecks = this.updateDecks.bind(this);
         this.updatePreview = this.updatePreview.bind(this);
         this.addCard = this.addCard.bind(this);
+        this.getStoredDeck = this.getStoredDeck.bind(this);
+        this.setStoredDeck = this.setStoredDeck.bind(this);
         this.insert();
         this.modal = this.dom.querySelector('#wkanki_modal');
         this.select = this.dom.querySelector('#wkanki_decks');
@@ -325,6 +328,7 @@ class Modal {
         this.backPreview = this.dom.querySelector('#wkanki_preview-back');
         this.front.addEventListener('input', this.updatePreview);
         this.back.addEventListener('input', this.updatePreview);
+        this.select.addEventListener('change', this.setStoredDeck);
         this.updateDecks();
     }
     async show() {
@@ -349,13 +353,21 @@ class Modal {
         const submit = this.dom.querySelector('#wkanki_submit');
         submit && submit.addEventListener('click', this.addCard);
     }
+    getStoredDeck() {
+        return (this.storage && this.storage.getItem('wkanki_deck')) || '';
+    }
+    setStoredDeck(e) {
+        const target = e.target;
+        this.storage && this.storage.setItem('wkanki_deck', target.value);
+    }
     async updateDecks() {
         const deckNames = await this.ankiConnectAdapter.getDeckNames();
+        const storedDeck = this.getStoredDeck();
         if (!deckNames) {
             return;
         }
         const html = deckNames
-            .map(d => `<option value="${d}">${d}</option>`)
+            .map(d => `<option value="${d}" ${d === storedDeck ? 'selected' : ''}>${d}</option>`)
             .join();
         this.select.innerHTML = html;
     }
