@@ -126,14 +126,15 @@ class Dom {
     }
     querySelector(query) {
         const element = this.dom.querySelector(query);
-        return element ? element : this.dom.createElement('div');
+        if (!element)
+            throw new Error(`unable to get element for query ${query}`);
+        return element;
     }
     querySelectorAll(query) {
         const elements = Array.from(this.dom.querySelectorAll(query));
-        if (elements)
-            return elements;
-        const emptyElement = this.dom.createElement('div');
-        return [emptyElement];
+        if (!elements || elements.length === 0)
+            throw new Error(`unable to get elements for query ${query}`);
+        return elements;
     }
 }
 exports.Dom = Dom;
