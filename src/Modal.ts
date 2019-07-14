@@ -1,11 +1,11 @@
-import { IWaniKaniPage } from "./Dom";
-import { IAnkiConnectAdapter } from "./AnkiConnectAdapter";
-import { Note } from "./types";
+import AnkiConnectAdapter, { IAnkiConnectAdapter } from "./AnkiConnectAdapter";
+import { IWaniKaniPage, NewWaniKaniPage } from "./WKPage";
+import { Dom, IDom } from "./Dom";
 
 export interface IModal {
   show(): Promise<void>
   hide(): void
-  update(e: Event): void
+  update(e: Event | null): Promise<void>
   updatePreview(e: Event | null): Promise<void>
 }
 
@@ -68,6 +68,7 @@ const generateBackHTML = (text: string) => {
 
 export default class Modal implements IModal {
   ankiConnectAdapter: IAnkiConnectAdapter
+  dom: IDom
   modal: HTMLElement;
   page: IWaniKaniPage;
 
@@ -78,9 +79,9 @@ export default class Modal implements IModal {
   frontPreview: HTMLElement;
   backPreview: HTMLElement;
 
-  constructor(ankiConnectAdapter: IAnkiConnectAdapter, page: IWaniKaniPage) {
+  constructor(ankiConnectAdapter: IAnkiConnectAdapter = new AnkiConnectAdapter(), dom: IDom = new Dom()) {
     this.ankiConnectAdapter = ankiConnectAdapter;
-    this.page = page;
+    this.dom = dom;
     this.show = this.show.bind(this);
     this.hide = this.hide.bind(this);
     this.insert = this.insert.bind(this);
@@ -89,19 +90,19 @@ export default class Modal implements IModal {
     this.updatePreview = this.updatePreview.bind(this);
     this.addCard = this.addCard.bind(this);
     this.insert();
-    this.modal = document.querySelector('#wkanki_modal') as HTMLElement;
-    this.select = document.querySelector('#wkanki_decks') as HTMLSelectElement;
-    this.front = document.querySelector('#wkanki_front') as HTMLInputElement;
-    this.back = document.querySelector('#wkanki_back') as HTMLTextAreaElement;
-    this.frontPreview = document.querySelector('#wkanki_preview-front') as HTMLElement;
-    this.backPreview = document.querySelector('#wkanki_preview-back') as HTMLElement;
+    this.modal = this.dom.querySelector('#wkanki_modal') as HTMLElement;
+    this.select = this.dom.querySelector('#wkanki_decks') as HTMLSelectElement;
+    this.front = this.dom.querySelector('#wkanki_front') as HTMLInputElement;
+    this.back = this.dom.querySelector('#wkanki_back') as HTMLTextAreaElement;
+    this.frontPreview = this.dom.querySelector('#wkanki_preview-front') as HTMLElement;
+    this.backPreview = this.dom.querySelector('#wkanki_preview-back') as HTMLElement;
     this.front.addEventListener('input', this.updatePreview);
     this.back.addEventListener('input', this.updatePreview);
     this.updateDecks();
   }
 
   async show(): Promise<void> {
-    const lessonType = await this.page.type();
+    const lessonType = await this.dom.itemType();
     // Radicals not supported
     if (lessonType === 'radical') return;
     this.update(null);
@@ -113,14 +114,14 @@ export default class Modal implements IModal {
   }
 
   private insert(): void {
-    const body = document.querySelector('body');
+    const body = this.dom.querySelector('body');
     if (!body) {
       return;
     }
     body.insertAdjacentHTML('afterend', modalTemplate);
-    const close = document.querySelector('.wkanki_close') as HTMLElement;
+    const close = this.dom.querySelector('.wkanki_close') as HTMLElement;
     close && close.addEventListener('click', this.hide);
-    const submit = document.querySelector('#wkanki_submit') as HTMLButtonElement;
+    const submit = this.dom.querySelector('#wkanki_submit') as HTMLButtonElement;
     submit && submit.addEventListener('click', this.addCard);
   }
 
@@ -133,8 +134,9 @@ export default class Modal implements IModal {
     this.select.innerHTML = html;
   }
 
-  update(e: Event | null): void {
+  async update(e: Event | null): Promise<void> {
     e && e.stopPropagation();
+    this.page = await NewWaniKaniPage();
     this.front.value = this.page.challenge();
     this.back.value = generateBackHTML(this.page.answer());
     this.updatePreview(e);
@@ -142,7 +144,7 @@ export default class Modal implements IModal {
 
   async updatePreview(e: Event | null): Promise<void> {
     e && e.stopPropagation();
-    const type = await this.page.type();
+    const type = await this.dom.itemType();
     const color = type === 'vocabulary' ? vocabColor : kanjiBackgroundColor;
     this.frontPreview.innerHTML = generateHTML(this.front.value, frontFontSize, color);
     this.backPreview.innerHTML = this.back.value;
@@ -150,17 +152,17 @@ export default class Modal implements IModal {
 
   async addCard(e: Event): Promise<boolean> {
     e.preventDefault();
-    const success = await this.ankiConnectAdapter.addNote({
+    const result = await this.ankiConnectAdapter.addNote({
       deckName: this.select.value,
       front: this.frontPreview.innerHTML,
       back: this.backPreview.innerHTML,
       tags: []
     });
-    if (success) {
+    if (result) {
       this.hide();
     } else {
-      console.error(success);
+      console.error(result);
     }
-    return success;
+    return result;
   }
 }
