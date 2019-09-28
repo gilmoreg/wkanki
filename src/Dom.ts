@@ -55,13 +55,11 @@ export class Dom implements IDom {
 
   querySelector(query: string): HTMLElement {
     const element = this.dom.querySelector(query) as HTMLElement;
-    if (!element) throw new Error(`unable to get element for query ${query}`);
-    return element;
+    return element ? element : this.dom.createElement('div');
   }
 
   querySelectorAll(query: string): HTMLElement[] {
     const elements: HTMLElement[] = Array.from(this.dom.querySelectorAll(query));
-    if (!elements || elements.length === 0) throw new Error(`unable to get elements for query ${query}`);
-    return elements;
+    return (elements && elements.length > 0) ? elements : [this.dom.createElement('div')];
   }
 }

@@ -126,15 +126,11 @@ class Dom {
     }
     querySelector(query) {
         const element = this.dom.querySelector(query);
-        if (!element)
-            throw new Error(`unable to get element for query ${query}`);
-        return element;
+        return element ? element : this.dom.createElement('div');
     }
     querySelectorAll(query) {
         const elements = Array.from(this.dom.querySelectorAll(query));
-        if (!elements || elements.length === 0)
-            throw new Error(`unable to get elements for query ${query}`);
-        return elements;
+        return (elements && elements.length > 0) ? elements : [this.dom.createElement('div')];
     }
 }
 exports.Dom = Dom;
@@ -1091,14 +1087,18 @@ class VocabLesson extends WaniKaniPage {
         return character && character.innerHTML || '';
     }
     answer() {
-        const reading = this.dom.querySelector('#supplement-voc-reading div:lang(ja)');
+        var readings = '';
+        const readingElements = this.dom.querySelectorAll('.pronunciation-variant');
+        if (readingElements && readingElements.length) {
+            readings = readingElements.map(el => el.innerHTML).join(',');
+        }
         const meaning = this.dom.querySelector('#meaning');
         const meanings = this.getMeanings();
         const meaningExplanation = this.dom.querySelector('#supplement-voc-meaning-exp');
         const readingExplanation = this.dom.querySelector('#supplement-voc-reading-exp');
         const pos = this.dom.querySelector('#supplement-voc-part-of-speech');
         return `
-        <span>${reading && reading.innerText}</span>
+        <span>${readings}</span>
         <p>
           ${meaning && meaning.innerText}${(meanings !== '' ? `, ${meanings}` : '')}
         </p>
@@ -1156,7 +1156,7 @@ class VocabPage extends WaniKaniPage {
         return character && character.innerText || '';
     }
     answer() {
-        const meaning = this.createMeaning();
+        const meaning = this.createMeaning(); // This is not capturing "Alternative meanings" in VocabPage (but those are all caps)
         const readingElements = this.dom.querySelectorAll('.vocabulary-reading p:lang(ja)');
         if (!readingElements)
             this.error('no reading elements');
@@ -1166,21 +1166,36 @@ class VocabPage extends WaniKaniPage {
             this.error('no mnemonic elements');
         const mnemonics = mnemonicElements.map(el => el.innerHTML).join(' ');
         return `
-        <p>${meaning}</p>
-        <p>
-          ${readings}
-        </p>
-        <p>
-          ${mnemonics}
-        </p>
-      `;
+      <p>
+        ${readings}
+      </p>
+      <p>
+        ${meaning}
+      </p>
+      <p>
+        ${mnemonics}
+      </p>
+    `;
     }
 }
 exports.VocabPage = VocabPage;
+/*
+Currently an issue with some vocab pages where you might see
+<section class="vocabulary-reading">
+          <h2>Reading</h2>
+          <p lang="ja">
+            けいと
+            <button type="button" class="audio-btn audio-idle"></button>
+            <audio>
+              <source src="https://cdn.wanikani.com/subjects/audio/3416-%E6%AF%9B%E7%B3%B8.mp3?1525117045" type="audio/mpeg">
+              <source src="https://cdn.wanikani.com/subjects/audio/3416-%E6%AF%9B%E7%B3%B8.ogg?1525117045" type="audio/ogg">
+            </audio>
+</p>        </section>
+*/
 const createReadings = (readingElements) => readingElements
     .filter(el => !el.innerText.includes('None'))
     .map(el => {
-    const wkCanon = !el.parentElement.classList.contains('muted-content');
+    const wkCanon = !el.parentElement || !el.parentElement.classList.contains('muted-content');
     return wkCanon ? el.innerText : `<span style="opacity: 0.3">${el.innerText}</span>`;
 })
     .join(', ');
