@@ -48,6 +48,8 @@ const kanjiColor = '255, 214, 241';
 const kanjiBackgroundColor = '241, 0, 161';
 const vocabColor = '161, 0, 241';
 const vocabBackgroundColor = '241,214,240';
+const readingBackgroundColor = '71,71,71';
+const readingForegroundColor = '255,255,255';
 const frontFontSize = 64;
 const backFontSize = 16;
 
@@ -62,7 +64,8 @@ const generateBackHTML = (text: string) => {
     .replace(/class="highlight-vocabulary"/g, `style="background-color: rgb(${vocabBackgroundColor});"`)
     .replace(/class="vocabulary-highlight"/g, `style="background-color: rgb(${vocabBackgroundColor});"`)
     .replace(/class="highlight-radical"/g, `style="background-color: rgb(${radicalColor});"`)
-    .replace(/class="radical-highlight"/g, `style="background-color: rgb(${radicalColor});"`);
+    .replace(/class="radical-highlight"/g, `style="background-color: rgb(${radicalColor});"`)
+    .replace(/class="reading-highlight"/g, `style="color: rgb(${readingForegroundColor}); background-color: rgb(${readingBackgroundColor})"`);
   return `<div style="font-size: ${backFontSize};">${html}</div>`;
 }
 

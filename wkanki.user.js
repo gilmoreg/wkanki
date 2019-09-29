@@ -288,6 +288,8 @@ const kanjiColor = '255, 214, 241';
 const kanjiBackgroundColor = '241, 0, 161';
 const vocabColor = '161, 0, 241';
 const vocabBackgroundColor = '241,214,240';
+const readingBackgroundColor = '71,71,71';
+const readingForegroundColor = '255,255,255';
 const frontFontSize = 64;
 const backFontSize = 16;
 const generateStyles = (fontSize, color) => `color: rgb(255, 255, 255); font-family: &quot;Hiragino Kaku Gothic Pro&quot;, Meiryo, &quot;Source Han Sans Japanese&quot;, NotoSansCJK, TakaoPGothic, &quot;Yu Gothic&quot;, &quot;ヒラギノ角ゴ Pro W3&quot;, メイリオ, Osaka, &quot;MS PGothic&quot;, &quot;ＭＳ Ｐゴシック&quot;, sans-serif; font-size: ${fontSize}px; text-align: center; background-color: rgb(${color}); line-height: normal;`;
@@ -299,7 +301,8 @@ const generateBackHTML = (text) => {
         .replace(/class="highlight-vocabulary"/g, `style="background-color: rgb(${vocabBackgroundColor});"`)
         .replace(/class="vocabulary-highlight"/g, `style="background-color: rgb(${vocabBackgroundColor});"`)
         .replace(/class="highlight-radical"/g, `style="background-color: rgb(${radicalColor});"`)
-        .replace(/class="radical-highlight"/g, `style="background-color: rgb(${radicalColor});"`);
+        .replace(/class="radical-highlight"/g, `style="background-color: rgb(${radicalColor});"`)
+        .replace(/class="reading-highlight"/g, `style="color: rgb(${readingForegroundColor}); background-color: rgb(${readingBackgroundColor})"`);
     return `<div style="font-size: ${backFontSize};">${html}</div>`;
 };
 class Modal {
