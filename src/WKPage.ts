@@ -87,7 +87,7 @@ export class VocabLesson extends WaniKaniPage implements IWaniKaniPage {
     var readings = '';
     const readingElements = this.dom.querySelectorAll('.pronunciation-variant');
     if (readingElements && readingElements.length) {
-      readings = readingElements.map(el => el.innerHTML).join(',');
+      readings = [...new Set(readingElements.map(el => el.innerHTML))].join(',');
     }
 
     const meaning = this.dom.querySelector('#meaning') as HTMLElement;
